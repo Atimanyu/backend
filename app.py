@@ -3,23 +3,45 @@ from fastapi import Body
 from fastapi import FastAPI
 # from sqlalchemy.orm import sessionmaker
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import date
 from fastapi import HTTPException
+from fastapi import UploadFile, File
 from fastapi.responses import StreamingResponse
+from fastapi import Form
 import io
 import boto3
 import requests
-SAGEMAKER_URL = "https://runtime.sagemaker.ap-south-1.amazonaws.com/endpoints/pipeline-endpoint1/invocations"  # Replace with your actual SageMaker endpoint URL
-sagemaker_client = boto3.client("sagemaker-runtime", region_name="ap-south-1",aws_access_key_id="",aws_secret_access_key="")
 class Patients(BaseModel):
     name: str
     age: int
     gender: str
     dob: str
-    image_b64: str
+    mri_scan: UploadFile
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],)
+
+@app.post("/formdata")
+async def receive_form_data(
+    name: str = Form(...),
+    age: int = Form(...),
+    gender: str = Form(...),
+    date: str = Form(...),
+    mri_scan: UploadFile = File(...)
+):
+    with open(f'{mri_scan.filename}_scan.jpg', 'wb') as f:
+        f.write(await mri_scan.read())
+    return {"message": "Form data received successfully"}
+    
+    
+    
 @app.post("/predict")
 def predict(patients: Patients):
     try:
